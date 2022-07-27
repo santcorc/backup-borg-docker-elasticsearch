@@ -1,5 +1,5 @@
 # backup-borg-docker-elasticsearch
-A dockerized borg container to create backups of docker volumes applied to elasticsearch snapshots
+A dockerized borg container to create backups of docker volumes applied to elasticsearch snapshots.
 
 ## Usage
 
@@ -76,14 +76,42 @@ Following the previous steps, the file *scriptC.sh* can be run and the elasticse
 
 ## Automate backup with cron
 
+When working with backups, it is interesting to automatize them in order to ensure, in case of fault of the system, have an updated copy of it. 
+
+In order to do that, cron is a good tool to execute periodically things, in this case the script. 
+
+To access it, execute the command
+
+```
+crontab -e
+```
+
+And at the end of the file add the following:
+
+```
+1 2 * * * /home/USER/LOCATIONOFSCRIPT/scriptC.sh
+```
+
+This will execute the *scriptC.sh* once a day at 02:01 AM. To change the hour of execution of the script visit the website *https://crontab.guru/* 
+
 ## Restore the backup
 
+Backups are nothing if they cannot be restored. In this case, the restoration must be done in two steps. 
 
+First, extract the borg backup of the volume. To do that it is only needed to execute the command:
 
-## How it works
+```
+borg extract ./NAMEOFREPOSITORIE::NAMEOFBACKUPWANTED
+```
 
+Once it is extracted, it is needed to load the volume into the new docker container. To do that, run it with 
 
+```
+docker run --rm --volumes-from es01 -v $(pwd):/backup ubuntu bash -c "cd /usr && tar xvf /backup/backup.tar --strip 1"
+```
 
-When running the borg container, it will point to the location of *databack* volume in */usr/share/elasticsearch/data* as can be seen in the file *params.sh*
+Once it is running, the final step to restore the elasticsearch database is creating a snapshot with the same name than the one located in the previous machine with (IMPORTANT, IT WILL NOT DELETE THE SNAPSHOT RESTORED) and restore it with 
 
-
+```
+curl --location --request PUT 'IPADDRESS:9200/_snapshot/repository/NAMEOFSNAPSHOT' 
+```
